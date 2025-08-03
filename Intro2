@@ -1,0 +1,49 @@
+# Time-Traveling Knowledge Expedition 🗺️
+
+Welcome to the Time-Traveling Knowledge Expedition! An immersive educational adventure game that teaches the Octalysis Framework through Indiana Jones-style treasure hunting across the Seven Ancient Wonders of the World.
+
+## How to Play
+
+### 🎯 **Objective**
+Master the 8 Core Drives of Human Motivation (Octalysis Framework) by completing challenges across ancient wonder locations within a 30-minute time limit.
+
+### 🎮 **Gameplay Rules**
+1. **Character Selection**: Choose from 6 unique adventurers, each with special abilities:
+   - **Dr. Gemoks** (Female) - Ancient Language Expert, Trap Detection, Photographic Memory
+   - **Dr. Moncits** (Male) - Athletic Prowess, Engineering Genius, Combat Training
+   - **Prof. Deb-Ab** (Female) - Mind Reading, Pattern Recognition, Psychic Archaeology
+   - **Dato Fatty** (Female) - Royal Connections, Treasure Magnetism, Authority Command
+   - **Tuan Montel** (Male) - Time Manipulation, Reality Bending, Dimensional Awareness
+   - **Monsieur Bulato Gedempolo** (Male) - Master Negotiator, Cultural Adaptability, Diplomatic Immunity
+
+2. **Adventure Progression**: 
+   - Start at the Temple of Epic Meaning (Foundation Level)
+   - Unlock new wonders by earning gold through correct answers
+   - Progress through 7 levels representing different Octalysis core drives
+
+3. **Challenge System**:
+   - Answer multiple-choice questions about motivation psychology
+   - Each character gets bonus points for challenges matching their abilities
+   - Receive immediate feedback with Octalysis insights
+
+4. **Time Pressure**: Complete the expedition within 30 minutes or face automatic game end
+
+5. **Scoring & Badges**:
+   - Earn gold for correct answers + character bonuses
+   - Unlock 8 different achievement badges
+   - Final score includes time bonus, accuracy, and badge points
+
+### 🏆 **Win Conditions**
+- **Victory**: Complete all 7 ancient wonders within the time limit
+- **Learning**: Gain deep understanding of the Octalysis Framework regardless of completion
+
+## Installation
+
+### **Option 1: Direct HTML Deployment**
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/expedition-game.git
+cd expedition-game
+
+# Open index.html in your browser
+open index.html

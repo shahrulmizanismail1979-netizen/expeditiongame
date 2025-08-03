@@ -1,0 +1,1305 @@
+import React, { useState, useEffect } from 'react';
+import { Compass, Map, Star, Trophy, User, BookOpen, Zap, ArrowRight, Search, Pickaxe, Shield, Target, UserX, Users, Crown, Sparkles, Brain, Clock, Award, Timer } from 'lucide-react';
+
+const IndyKnowledgeGame = () => {
+  const [gameState, setGameState] = useState({
+    playerName: '',
+    selectedCharacter: '',
+    currentWonder: null,
+    knowledgeTokens: 0,
+    level: 1,
+    artifacts: [],
+    badges: [],
+    unlockedWonders: [0],
+    gameStarted: false,
+    showWelcome: true,
+    showCharacterIntro: false,
+    expeditionRank: 'Junior Explorer',
+    gameStartTime: null,
+    timeRemaining: 30 * 60,
+    gameCompleted: false,
+    gameEnded: false,
+    perfectStreak: 0,
+    totalChallenges: 0,
+    correctAnswers: 0
+  });
+
+  const [currentChallenge, setCurrentChallenge] = useState(null);
+  const [challengeResult, setChallengeResult] = useState('');
+  const [showInventory, setShowInventory] = useState(false);
+  const [showBadges, setShowBadges] = useState(false);
+
+  const expeditionRanks = [
+    'Junior Explorer', 'Field Researcher', 'Senior Archaeologist', 
+    'Expedition Leader', 'Legendary Adventurer'
+  ];
+
+  const gameBadges = [
+    {
+      id: 'first_steps',
+      name: 'First Steps',
+      description: 'Complete your first challenge',
+      icon: '🌱',
+      condition: (state) => state.correctAnswers >= 1,
+      points: 50
+    },
+    {
+      id: 'knowledge_seeker',
+      name: 'Knowledge Seeker',
+      description: 'Answer 5 challenges correctly',
+      icon: '📚',
+      condition: (state) => state.correctAnswers >= 5,
+      points: 100
+    },
+    {
+      id: 'speed_demon',
+      name: 'Speed Demon',
+      description: 'Complete a challenge in under 30 seconds',
+      icon: '⚡',
+      condition: (state) => state.fastestAnswer && state.fastestAnswer <= 30,
+      points: 150
+    },
+    {
+      id: 'perfect_streak',
+      name: 'Perfect Scholar',
+      description: 'Get 3 answers correct in a row',
+      icon: '🎯',
+      condition: (state) => state.perfectStreak >= 3,
+      points: 200
+    },
+    {
+      id: 'octalysis_master',
+      name: 'Octalysis Master',
+      description: 'Complete challenges from all 8 core drives',
+      icon: '🧠',
+      condition: (state) => state.coresDrivesMastered >= 8,
+      points: 300
+    },
+    {
+      id: 'treasure_hunter',
+      name: 'Treasure Hunter',
+      description: 'Collect 10 artifacts',
+      icon: '💎',
+      condition: (state) => state.artifacts.length >= 10,
+      points: 250
+    },
+    {
+      id: 'time_master',
+      name: 'Time Master',
+      description: 'Complete the game with 10+ minutes remaining',
+      icon: '⏰',
+      condition: (state) => state.timeRemaining >= 600 && state.gameCompleted,
+      points: 400
+    },
+    {
+      id: 'legend',
+      name: 'Expedition Legend',
+      description: 'Complete all 7 wonders',
+      icon: '👑',
+      condition: (state) => state.wondersCompleted >= 7,
+      points: 500
+    }
+  ];
+
+  useEffect(() => {
+    let interval = null;
+    
+    if (gameState.gameStarted && !gameState.gameEnded && gameState.timeRemaining > 0) {
+      interval = setInterval(() => {
+        setGameState(prev => {
+          const newTime = prev.timeRemaining - 1;
+          
+          if (newTime <= 0) {
+            return {
+              ...prev,
+              timeRemaining: 0,
+              gameEnded: true
+            };
+          }
+          
+          return {
+            ...prev,
+            timeRemaining: newTime
+          };
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [gameState.gameStarted, gameState.gameEnded, gameState.timeRemaining]);
+
+  const characters = [
+    {
+      id: 'gemoks',
+      name: 'Dr. Gemoks',
+      gender: 'Female',
+      icon: User,
+      powers: [
+        'Ancient Language Expert',
+        'Trap Detection Master', 
+        'Photographic Memory'
+      ],
+      bonuses: {
+        'meaning': 5, 'purpose': 5, 'development': 3, 'creativity': 4, 'social': 4, 'scarcity': 5, 'curiosity': 4, 'avoidance': 5
+      },
+      description: "A brilliant archaeologist with piercing emerald eyes and silver-streaked auburn hair tied in a practical braid. She wears weathered leather boots, khaki expedition gear, and carries an ancient tome bound in mysterious metals. Her fingers trace hieroglyphs with supernatural understanding.",
+      backstory: "Born in the shadow of the Great Library of Alexandria's ruins, Dr. Gemoks discovered her gift for ancient languages at age seven when she began speaking to Egyptian artifacts. Trained by secretive scholars, she can read the thoughts embedded in stone and metal by civilizations long past.",
+      silhouette: "👩‍🎓",
+      colors: "from-emerald-600 to-teal-700"
+    },
+    {
+      id: 'moncits',
+      name: 'Dr. Moncits',
+      gender: 'Male',
+      icon: UserX,
+      powers: [
+        'Athletic Prowess',
+        'Engineering Genius',
+        'Combat Training'
+      ],
+      bonuses: {
+        'development': 6, 'creativity': 5, 'social': 4, 'meaning': 4, 'scarcity': 4, 'curiosity': 5, 'avoidance': 4, 'purpose': 3
+      },
+      description: "A rugged adventurer with steel-gray eyes and a jaw carved from granite. His muscular frame is clad in tactical gear, utility belts, and reinforced climbing boots. Scars on his hands tell tales of countless expeditions through collapsing ruins and deadly mechanisms.",
+      backstory: "Former military engineer turned treasure hunter, Dr. Moncits survived the collapse of three ancient temples thanks to his quick thinking and quicker reflexes. He can disarm any trap, scale any wall, and his engineering mind sees solutions where others see only danger.",
+      silhouette: "👨‍🔧",
+      colors: "from-slate-600 to-gray-700"
+    },
+    {
+      id: 'debab',
+      name: 'Prof. Deb-Ab',
+      gender: 'Female',
+      icon: Brain,
+      powers: [
+        'Mind Reading Intuition',
+        'Pattern Recognition',
+        'Psychic Archaeology'
+      ],
+      bonuses: {
+        'meaning': 6, 'curiosity': 6, 'social': 5, 'development': 4, 'creativity': 4, 'scarcity': 3, 'avoidance': 4, 'purpose': 5
+      },
+      description: "An enigmatic figure with violet eyes that seem to pierce through time itself. Her midnight-black hair flows like liquid shadow, and she wears flowing robes adorned with celestial patterns. Crystals and ancient amulets hang from her neck, glowing faintly with inner light.",
+      backstory: "Descendant of an ancient bloodline of oracles, Prof. Deb-Ab can hear the whispers of long-dead civilizations. Raised in hidden temples where she learned to commune with spirits of the past, her psychic abilities allow her to see patterns invisible to others and read the emotional imprints left on ancient artifacts.",
+      silhouette: "🔮",
+      colors: "from-purple-600 to-indigo-700"
+    },
+    {
+      id: 'fatty',
+      name: 'Dato Fatty',
+      gender: 'Female',
+      icon: Crown,
+      powers: [
+        'Royal Connections',
+        'Treasure Magnetism',
+        'Authority Command'
+      ],
+      bonuses: {
+        'social': 6, 'scarcity': 6, 'meaning': 5, 'development': 4, 'creativity': 4, 'curiosity': 3, 'avoidance': 4, 'purpose': 4
+      },
+      description: "A regal presence commanding respect with golden eyes that gleam like ancient coins. She wears royal blue expedition attire trimmed with gold thread, a jeweled crown modified for adventure, and carries a scepter that doubles as a treasure-detecting device. Her bearing speaks of noble bloodlines and unlimited resources.",
+      backstory: "Born into a royal family with secret ties to ancient treasure-hunting guilds, Dato Fatty inherited both a kingdom's wealth and mystical abilities to locate lost artifacts. Her royal connections open doors across the globe, and her natural magnetism for treasure has made her legendary among archaeological circles.",
+      silhouette: "👸",
+      colors: "from-yellow-600 to-amber-700"
+    },
+    {
+      id: 'montel',
+      name: 'Tuan Montel',
+      gender: 'Male',
+      icon: Sparkles,
+      powers: [
+        'Time Manipulation',
+        'Reality Bending',
+        'Dimensional Awareness'
+      ],
+      bonuses: {
+        'curiosity': 6, 'development': 5, 'creativity': 6, 'scarcity': 5, 'meaning': 4, 'social': 3, 'avoidance': 4, 'purpose': 3
+      },
+      description: "A mysterious figure whose age seems to shift with the light. His silver hair shimmers with temporal energy, and his clothes appear to be from multiple eras simultaneously. Reality warps subtly around him, and ancient clockwork devices orbit his form like loyal companions.",
+      backstory: "Once a normal archaeologist until he touched a temporal artifact in a Mayan ruin, Tuan Montel gained the ability to perceive and manipulate time itself. He exists partially outside normal reality, able to slow deadly traps, see the past layered over the present, and bend the laws of physics when ancient mysteries demand it.",
+      silhouette: "⏰",
+      colors: "from-cyan-600 to-blue-700"
+    },
+    {
+      id: 'bulato',
+      name: 'Monsieur Bulato Gedempolo',
+      gender: 'Male',
+      icon: Users,
+      powers: [
+        'Master Negotiator',
+        'Cultural Adaptability',
+        'Diplomatic Immunity'
+      ],
+      bonuses: {
+        'social': 6, 'curiosity': 5, 'meaning': 5, 'development': 4, 'creativity': 5, 'scarcity': 4, 'avoidance': 5, 'purpose': 4
+      },
+      description: "A sophisticated gentleman with kind brown eyes and an impeccably groomed beard. His three-piece suit is perfectly tailored for both formal dinners and tomb exploration. Multiple diplomatic badges and cultural symbols adorn his vest, and he carries briefcases containing gifts for every culture on Earth.",
+      backstory: "A world-renowned diplomat and cultural anthropologist, Monsieur Bulato Gedempolo has been granted special status by governments worldwide. His gift for languages, customs, and negotiation has prevented three international incidents and opened archaeological sites previously forbidden to outsiders. He can talk his way into anywhere and out of any danger.",
+      silhouette: "🤵",
+      colors: "from-rose-600 to-pink-700"
+    }
+  ];
+
+  const artifacts = [
+    { name: 'Golden Compass', icon: Compass, description: 'Guides you through ancient mysteries' },
+    { name: 'Ancient Codex', icon: BookOpen, description: 'Contains forgotten knowledge' },
+    { name: 'Explorer\'s Badge', icon: Shield, description: 'Mark of a true adventurer' },
+    { name: 'Crystal Lens', icon: Search, description: 'Reveals hidden truths' },
+    { name: 'Stone Tablet', icon: Target, description: 'Records of ancient wisdom' }
+  ];
+
+  const wonders = [
+    {
+      name: "Temple of Epic Meaning",
+      location: "Tibet - The Monastery of Purpose",
+      description: "Discover the ancient scrolls that reveal why great civilizations were driven by epic meaning and calling",
+      color: "from-blue-600 via-indigo-500 to-purple-600",
+      danger: "Medium",
+      unlocked: true,
+      expedition: "The Call to Greatness",
+      octalysisCore: "Epic Meaning & Calling",
+      levelTheme: "Foundation Level - Understanding Purpose",
+      challenges: [
+        {
+          type: "meaning",
+          title: "The Sacred Mission Scroll",
+          question: "Ancient monks reveal: 'People are motivated when they believe they are doing something greater than themselves.' In Octalysis, what is this core drive called?",
+          options: ["Epic Meaning & Calling", "Development & Accomplishment", "Empowerment of Creativity", "Social Influence & Relatedness"],
+          correct: 0,
+          explanation: "Epic Meaning & Calling drives people when they believe they're part of something bigger than themselves - like the monks' sacred mission to preserve ancient wisdom!",
+          reward: "Sacred Purpose Scroll",
+          octalysisInsight: "This is Core Drive 1: People need to feel their actions have meaning beyond personal gain."
+        },
+        {
+          type: "purpose",
+          title: "The Chosen One's Burden",
+          question: "The temple inscription reads: 'Only the chosen one can save our civilization.' What Octalysis principle makes this so motivating?",
+          options: ["People feel special and unique", "Fear of losing something", "Desire for rewards", "Social pressure"],
+          correct: 0,
+          explanation: "Being 'chosen' triggers Epic Meaning because it makes people feel they have a special role in something greater - just like Indiana Jones being the only one who can save the day!",
+          reward: "Chosen One's Medallion",
+          octalysisInsight: "Feeling chosen or special amplifies Epic Meaning & Calling significantly."
+        }
+      ]
+    },
+    {
+      name: "Pyramid of Development",
+      location: "Egypt - The Achievement Chambers",
+      description: "Navigate through progressive chambers that test your mastery and unlock new abilities",
+      color: "from-yellow-600 via-orange-500 to-red-600",
+      danger: "High",
+      unlocked: false,
+      expedition: "The Mastery Quest",
+      octalysisCore: "Development & Accomplishment", 
+      levelTheme: "Growth Level - Building Competence",
+      challenges: [
+        {
+          type: "development",
+          title: "The Chamber of Challenges",
+          question: "Each chamber gets progressively harder, but you gain new skills. In Octalysis, what drives people to overcome increasing challenges?",
+          options: ["Development & Accomplishment", "Loss & Avoidance", "Scarcity & Impatience", "Unpredictability & Curiosity"],
+          correct: 0,
+          explanation: "Development & Accomplishment motivates people to overcome challenges because they want to develop skills and feel accomplished - like leveling up!",
+          reward: "Mastery Crystal",
+          octalysisInsight: "Core Drive 2: People are motivated by the progress toward goals and mastery of skills."
+        },
+        {
+          type: "progression",
+          title: "The Pharaoh's Test of Worth",
+          question: "The pharaoh's ghost appears: 'Prove you are worthy by demonstrating your growth.' What makes progression systems so engaging in Octalysis?",
+          options: ["Clear goals and visible progress", "Random rewards", "Social comparison", "Time pressure"],
+          correct: 0,
+          explanation: "Clear goals with visible progress triggers Development & Accomplishment. People love seeing their advancement - like experience points in games!",
+          reward: "Progress Compass", 
+          octalysisInsight: "Visible progress indicators and clear achievement paths maximize this core drive."
+        }
+      ]
+    },
+    {
+      name: "Gardens of Creative Expression",
+      location: "Babylon - The Innovation Terraces", 
+      description: "Solve puzzles by creating unique solutions and expressing your creativity in ancient mechanisms",
+      color: "from-green-600 via-emerald-500 to-teal-600",
+      danger: "Medium",
+      unlocked: false,
+      expedition: "The Creator's Path",
+      octalysisCore: "Empowerment of Creativity & Feedback",
+      levelTheme: "Expression Level - Unleashing Creativity",
+      challenges: [
+        {
+          type: "creativity",
+          title: "The Infinite Solutions Chamber",
+          question: "This ancient puzzle has multiple solutions - you must create your own path. What Octalysis core drive does this engage?",
+          options: ["Empowerment of Creativity & Feedback", "Development & Accomplishment", "Epic Meaning & Calling", "Social Influence & Relatedness"],
+          correct: 0,
+          explanation: "Empowerment of Creativity & Feedback drives people when they can express themselves creatively and try different approaches - like solving puzzles in unique ways!",
+          reward: "Innovation Tool",
+          octalysisInsight: "Core Drive 3: People are motivated when they can express creativity and receive feedback on their creative choices."
+        }
+      ]
+    },
+    {
+      name: "Colosseum of Social Bonds", 
+      location: "Rhodes - The Arena of Alliances",
+      description: "Form alliances, compete with rivals, and gain status among fellow treasure hunters",
+      color: "from-amber-600 via-yellow-500 to-orange-600",
+      danger: "High",
+      unlocked: false,
+      expedition: "The Social Gambit",
+      octalysisCore: "Social Influence & Relatedness",
+      levelTheme: "Connection Level - Building Relationships", 
+      challenges: [
+        {
+          type: "social",
+          title: "The Alliance Negotiation",
+          question: "Other archaeologists want to join your expedition for prestige. What Octalysis drive motivates people through social elements?",
+          options: ["Social Influence & Relatedness", "Ownership & Possession", "Scarcity & Impatience", "Loss & Avoidance"],
+          correct: 0,
+          explanation: "Social Influence & Relatedness drives people through mentorship, acceptance, social responses, and companionship - like forming expedition teams!",
+          reward: "Alliance Badge",
+          octalysisInsight: "Core Drive 4: People are motivated by what others think, do, and say, as well as by their desire to connect."
+        }
+      ]
+    },
+    {
+      name: "Vault of Rare Treasures",
+      location: "Alexandria - The Lighthouse of Scarcity", 
+      description: "Race against time to claim limited artifacts before other treasure hunters arrive",
+      color: "from-red-600 via-pink-500 to-rose-600",
+      danger: "Very High",
+      unlocked: false,
+      expedition: "The Scarcity Rush",
+      octalysisCore: "Scarcity & Impatience",
+      levelTheme: "Urgency Level - Creating Desire Through Limitation",
+      challenges: [
+        {
+          type: "scarcity",
+          title: "The Last Golden Artifact",
+          question: "Only one golden artifact remains, and other expeditions are approaching. What Octalysis drive makes this scenario so motivating?",
+          options: ["Scarcity & Impatience", "Unpredictability & Curiosity", "Loss & Avoidance", "Ownership & Possession"],
+          correct: 0,
+          explanation: "Scarcity & Impatience drives people when something is rare, exclusive, or immediately unattainable - like the last treasure!",
+          reward: "Rare Artifact",
+          octalysisInsight: "Core Drive 6: The motivation for something increases when it's perceived as scarce or unattainable."
+        }
+      ]
+    },
+    {
+      name: "Maze of Mysteries",
+      location: "Halicarnassus - The Unpredictable Tomb",
+      description: "Navigate an ever-changing labyrinth where each turn reveals unexpected surprises and hidden secrets",
+      color: "from-purple-600 via-violet-500 to-indigo-600", 
+      danger: "Extreme",
+      unlocked: false,
+      expedition: "The Curiosity Quest",
+      octalysisCore: "Unpredictability & Curiosity",
+      levelTheme: "Discovery Level - Embracing the Unknown",
+      challenges: [
+        {
+          type: "curiosity",
+          title: "The Ever-Changing Passages",
+          question: "Each time you enter this tomb, the layout changes randomly. What Octalysis drive does this unpredictability engage?",
+          options: ["Unpredictability & Curiosity", "Development & Accomplishment", "Empowerment of Creativity", "Epic Meaning & Calling"],
+          correct: 0,
+          explanation: "Unpredictability & Curiosity drives people when they don't know what will happen next - like exploring a randomly changing maze!",
+          reward: "Mystery Key",
+          octalysisInsight: "Core Drive 7: People are motivated by unpredictable, variable outcomes that engage their curiosity."
+        }
+      ]
+    },
+    {
+      name: "Temple of Final Trials",
+      location: "Olympia - The Avoidance Sanctuary",
+      description: "Overcome your fears and prevent the loss of everything you've worked to achieve",
+      color: "from-gray-600 via-slate-500 to-zinc-600",
+      danger: "Extreme", 
+      unlocked: false,
+      expedition: "The Preservation Mission",
+      octalysisCore: "Loss & Avoidance",
+      levelTheme: "Protection Level - Defending What Matters",
+      challenges: [
+        {
+          type: "avoidance",
+          title: "The Crumbling Foundation",
+          question: "The temple is collapsing and you'll lose all your artifacts unless you act fast. What Octalysis drive motivates people to prevent losses?",
+          options: ["Loss & Avoidance", "Ownership & Possession", "Social Influence & Relatedness", "Scarcity & Impatience"],
+          correct: 0,
+          explanation: "Loss & Avoidance drives people to take action to avoid losing something they already have - like protecting your hard-earned treasures!",
+          reward: "Preservation Shield",
+          octalysisInsight: "Core Drive 8: People are motivated to avoid losing something they own or to avoid negative consequences."
+        }
+      ]
+    }
+  ];
+
+  const startGame = () => {
+    if (gameState.playerName && gameState.selectedCharacter) {
+      setGameState(prev => ({
+        ...prev,
+        showWelcome: false,
+        showCharacterIntro: true
+      }));
+    }
+  };
+
+  const proceedToGame = () => {
+    setGameState(prev => ({
+      ...prev,
+      showCharacterIntro: false,
+      gameStarted: true,
+      gameStartTime: Date.now()
+    }));
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const checkBadges = (newState) => {
+    const newBadges = [];
+    
+    gameBadges.forEach(badge => {
+      if (!newState.badges.find(b => b.id === badge.id) && badge.condition(newState)) {
+        newBadges.push(badge);
+      }
+    });
+    
+    return newBadges;
+  };
+
+  const calculateScore = () => {
+    const timeBonus = Math.max(0, Math.floor(gameState.timeRemaining / 10));
+    const accuracyBonus = gameState.totalChallenges > 0 ? 
+      Math.floor((gameState.correctAnswers / gameState.totalChallenges) * 1000) : 0;
+    const badgePoints = gameState.badges.reduce((total, badge) => total + badge.points, 0);
+    const tokenPoints = gameState.knowledgeTokens * 5;
+    
+    return timeBonus + accuracyBonus + badgePoints + tokenPoints;
+  };
+
+  const selectWonder = (wonderIndex) => {
+    if (gameState.unlockedWonders.includes(wonderIndex)) {
+      setGameState(prev => ({
+        ...prev,
+        currentWonder: wonderIndex
+      }));
+    }
+  };
+
+  const startChallenge = (challenge) => {
+    setCurrentChallenge({
+      ...challenge,
+      startTime: Date.now()
+    });
+    setChallengeResult('');
+  };
+
+  const getCharacterBonus = (challengeType) => {
+    const character = characters.find(c => c.id === gameState.selectedCharacter);
+    if (character && character.bonuses[challengeType]) {
+      return { 
+        bonus: character.bonuses[challengeType], 
+        ability: character.powers[0]
+      };
+    }
+    return { bonus: 0, ability: null };
+  };
+
+  const getCharacterHint = (challenge) => {
+    const character = characters.find(c => c.id === gameState.selectedCharacter);
+    const characterBonus = getCharacterBonus(challenge.type);
+    
+    if (characterBonus.bonus > 0 && character) {
+      const hints = {
+        'gemoks': {
+          'meaning': "Your Ancient Language expertise reveals the sacred purpose behind these texts...",
+          'purpose': "Your Photographic Memory recalls similar chosen one prophecies...",
+          'development': "Your Trap Detection recognizes the progression patterns...",
+          'creativity': "Your Ancient Language skills help decode creative solutions...",
+          'social': "Your expertise makes others want to learn from you...",
+          'scarcity': "Your Trap Detection senses the urgency of limited time...",
+          'curiosity': "Your Photographic Memory connects seemingly random patterns...",
+          'avoidance': "Your Trap Detection warns of impending losses..."
+        },
+        'moncits': {
+          'development': "Your Engineering expertise recognizes these progressive challenges...",
+          'creativity': "Your Engineering mind sees multiple solution pathways...",
+          'social': "Your Combat Training commands respect from other adventurers...",
+          'meaning': "Your Athletic training connects with the team mission spirit...",
+          'scarcity': "Your Combat Training kicks in under time pressure...",
+          'curiosity': "Your Engineering mind loves solving unpredictable mechanisms...",
+          'avoidance': "Your Combat Training focuses on preventing mission failure..."
+        },
+        'debab': {
+          'meaning': "Your Mind Reading reveals the deeper purpose behind these trials...",
+          'curiosity': "Your Psychic Archaeology senses the unpredictable energies...",
+          'social': "Your Pattern Recognition reads the social dynamics perfectly...",
+          'development': "Your Mind Reading picks up thoughts of growth and mastery...",
+          'creativity': "Your intuitive powers guide creative problem solving...",
+          'scarcity': "Your psychic abilities sense the rarity of opportunities...",
+          'avoidance': "Your Mind Reading warns of impending losses..."
+        },
+        'fatty': {
+          'social': "Your Royal Connections automatically establish authority...",
+          'scarcity': "Your Treasure Magnetism draws you to rare opportunities...",
+          'meaning': "Your royal heritage connects with serving something greater...",
+          'development': "Your Authority Command motivates others to excel...",
+          'creativity': "Your royal resources enable creative solutions...",
+          'curiosity': "Your royal networks provide insider information...",
+          'avoidance': "Your royal status protects against losses..."
+        },
+        'montel': {
+          'curiosity': "Your Time Manipulation thrives on unpredictable outcomes...",
+          'development': "Your Reality Bending accelerates skill development...",
+          'creativity': "Your Dimensional Awareness opens infinite creative possibilities...",
+          'scarcity': "Your Time powers create urgency and scarcity...",
+          'meaning': "Your dimensional perspective reveals cosmic purposes...",
+          'social': "Your reality-bending abilities amaze and influence others...",
+          'avoidance': "Your Time Manipulation can prevent losses..."
+        },
+        'bulato': {
+          'social': "Your Master Negotiator skills read the social situation perfectly...",
+          'curiosity': "Your Cultural Adaptability embraces unpredictable situations...",
+          'meaning': "Your Diplomatic experience serves causes greater than yourself...",
+          'development': "Your multilingual skills show continuous self-improvement...",
+          'creativity': "Your Cultural Adaptability finds creative diplomatic solutions...",
+          'scarcity': "Your diplomatic immunity provides exclusive access...",
+          'avoidance': "Your negotiation skills prevent conflicts and losses..."
+        }
+      };
+      
+      return hints[character.id]?.[challenge.type] || null;
+    }
+    return null;
+  };
+
+  const getPlayerTitle = () => {
+    const character = characters.find(c => c.id === gameState.selectedCharacter);
+    return character ? character.name : '';
+  };
+
+  const answerChallenge = (selectedAnswer) => {
+    const isCorrect = selectedAnswer === currentChallenge.correct;
+    const characterBonus = getCharacterBonus(currentChallenge.type);
+    const answerTime = Date.now() - (currentChallenge.startTime || Date.now());
+    const answerTimeSeconds = Math.floor(answerTime / 1000);
+    
+    if (isCorrect) {
+      setChallengeResult('correct');
+      setGameState(prev => {
+        const baseTokens = 15;
+        const bonusTokens = characterBonus.bonus;
+        const newTokens = prev.knowledgeTokens + baseTokens + bonusTokens;
+        const newArtifacts = [...prev.artifacts];
+        const newUnlocked = [...prev.unlockedWonders];
+        const newCorrectAnswers = prev.correctAnswers + 1;
+        const newTotalChallenges = prev.totalChallenges + 1;
+        const newPerfectStreak = prev.perfectStreak + 1;
+        
+        if (currentChallenge.reward && !newArtifacts.find(a => a.name === currentChallenge.reward)) {
+          const artifact = artifacts.find(a => a.name === currentChallenge.reward);
+          if (artifact) newArtifacts.push(artifact);
+        }
+        
+        if (newTokens >= 40 && !newUnlocked.includes(1)) {
+          newUnlocked.push(1);
+        }
+        if (newTokens >= 80 && !newUnlocked.includes(2)) {
+          newUnlocked.push(2);
+        }
+        if (newTokens >= 120 && !newUnlocked.includes(3)) {
+          newUnlocked.push(3);
+        }
+        if (newTokens >= 160 && !newUnlocked.includes(4)) {
+          newUnlocked.push(4);
+        }
+        if (newTokens >= 200 && !newUnlocked.includes(5)) {
+          newUnlocked.push(5);
+        }
+        if (newTokens >= 240 && !newUnlocked.includes(6)) {
+          newUnlocked.push(6);
+        }
+        
+        const newLevel = Math.floor(newTokens / 40) + 1;
+        const rankIndex = Math.min(newLevel - 1, expeditionRanks.length - 1);
+        
+        const newState = {
+          ...prev,
+          knowledgeTokens: newTokens,
+          artifacts: newArtifacts,
+          unlockedWonders: newUnlocked,
+          level: newLevel,
+          expeditionRank: expeditionRanks[rankIndex],
+          correctAnswers: newCorrectAnswers,
+          totalChallenges: newTotalChallenges,
+          perfectStreak: newPerfectStreak,
+          fastestAnswer: !prev.fastestAnswer || answerTimeSeconds < prev.fastestAnswer ? answerTimeSeconds : prev.fastestAnswer,
+          wondersCompleted: newUnlocked.length,
+          gameCompleted: newUnlocked.length >= 7
+        };
+        
+        const newBadges = checkBadges(newState);
+        
+        return {
+          ...newState,
+          badges: [...prev.badges, ...newBadges]
+        };
+      });
+    } else {
+      setChallengeResult('incorrect');
+      setGameState(prev => ({
+        ...prev,
+        totalChallenges: prev.totalChallenges + 1,
+        perfectStreak: 0
+      }));
+    }
+  };
+
+  const closeChallenge = () => {
+    setCurrentChallenge(null);
+    setChallengeResult('');
+  };
+
+  const getDangerColor = (danger) => {
+    const colors = {
+      'Low': 'text-green-400',
+      'Medium': 'text-yellow-400', 
+      'High': 'text-orange-400',
+      'Very High': 'text-red-400',
+      'Extreme': 'text-purple-400'
+    };
+    return colors[danger] || 'text-gray-400';
+  };
+
+  if (gameState.showWelcome) {
+    return (
+      <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-amber-900 via-orange-900 to-red-900">
+        <div className="absolute inset-0 opacity-30 bg-amber-100"></div>
+        <div className="absolute top-10 left-10 w-32 h-32 rounded-full opacity-20 bg-amber-800"></div>
+        <div className="absolute bottom-20 right-20 w-24 h-24 rounded-full opacity-15 bg-orange-900"></div>
+        <div className="absolute top-1/2 left-1/4 w-16 h-16 rounded-full opacity-10 bg-red-900"></div>
+        
+        <div className="absolute inset-4 border-4 border-amber-800 opacity-30 rounded-lg"></div>
+        
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-8 max-w-md w-full border-2 border-amber-700/60 shadow-2xl relative">
+            <div className="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-amber-600 rounded-tl-lg"></div>
+            <div className="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-amber-600 rounded-tr-lg"></div>
+            <div className="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-amber-600 rounded-bl-lg"></div>
+            <div className="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-amber-600 rounded-br-lg"></div>
+
+            <div className="text-center mb-8">
+              <Compass className="w-20 h-20 mx-auto mb-4 text-amber-400 animate-spin" style={{animationDuration: '8s'}} />
+              <h1 className="text-3xl font-bold text-amber-300 mb-2 font-serif tracking-wide">EXPEDITION BRIEFING</h1>
+              <div className="border-t border-b border-amber-600/50 py-4 my-4 bg-amber-900/20 rounded">
+                <h2 className="text-2xl font-bold text-amber-100 mb-2">Ancient Wonders Quest</h2>
+                <p className="text-amber-200 italic">"Fortune and Glory, Kid... Fortune and Glory"</p>
+              </div>
+              <p className="text-amber-200">Gear up for the adventure of a lifetime through history's greatest mysteries!</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-amber-300 mb-2 uppercase tracking-wide">Adventurer Name</label>
+                <input
+                  type="text"
+                  value={gameState.playerName}
+                  onChange={(e) => setGameState(prev => ({...prev, playerName: e.target.value}))}
+                  className="w-full px-4 py-2 bg-amber-900/30 border-2 border-amber-600/50 rounded-lg text-amber-100 placeholder-amber-400 focus:border-amber-400 backdrop-blur-sm"
+                  placeholder="Enter your expedition name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-amber-300 mb-2 uppercase tracking-wide">Choose Your Character</label>
+                <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto bg-amber-900/20 rounded-lg p-3 border border-amber-600/30">
+                  {characters.map((character) => {
+                    const IconComponent = character.icon;
+                    return (
+                      <button
+                        key={character.id}
+                        onClick={() => setGameState(prev => ({...prev, selectedCharacter: character.id}))}
+                        className={`p-3 rounded-lg border-2 transition-all font-serif text-left ${
+                          gameState.selectedCharacter === character.id 
+                            ? 'border-amber-400 bg-amber-400/20 text-amber-100 shadow-lg' 
+                            : 'border-amber-600/50 bg-amber-900/20 text-amber-200 hover:border-amber-400/70 hover:bg-amber-800/30'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 mb-2">
+                          <IconComponent className="w-5 h-5" />
+                          <div>
+                            <div className="font-bold text-sm">{character.name}</div>
+                            <div className="text-xs">{character.gender}</div>
+                          </div>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          {character.powers.map((power, index) => (
+                            <div key={index}>• {power}</div>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <button
+                onClick={startGame}
+                disabled={!gameState.playerName || !gameState.selectedCharacter}
+                className="w-full bg-gradient-to-r from-amber-600 to-orange-700 text-black font-bold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-amber-500 hover:to-orange-600 transition-all duration-300 uppercase tracking-wide font-serif shadow-lg border-2 border-amber-800"
+              >
+                🎒 Begin Expedition
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (gameState.showCharacterIntro) {
+    const selectedChar = characters.find(c => c.id === gameState.selectedCharacter);
+    
+    return (
+      <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-amber-900 via-orange-900 to-red-900">
+        <div className="absolute inset-0 opacity-20 bg-amber-100"></div>
+        
+        <div className="absolute top-6 left-6 w-8 h-8 opacity-30">
+          <div className="text-amber-700 text-2xl">⚓</div>
+        </div>
+        <div className="absolute top-6 right-6 w-8 h-8 opacity-30">
+          <div className="text-amber-700 text-2xl">🗡️</div>
+        </div>
+        <div className="absolute bottom-6 left-6 w-8 h-8 opacity-30">
+          <div className="text-amber-700 text-2xl">💀</div>
+        </div>
+        <div className="absolute bottom-6 right-6 w-8 h-8 opacity-30">
+          <div className="text-amber-700 text-2xl">💰</div>
+        </div>
+        
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="bg-black/50 backdrop-blur-sm rounded-2xl p-8 max-w-4xl w-full border-2 border-amber-700/60 shadow-2xl relative">
+            <div className="absolute -top-2 -left-2 w-8 h-8 border-l-4 border-t-4 border-amber-600 rounded-tl-lg"></div>
+            <div className="absolute -top-2 -right-2 w-8 h-8 border-r-4 border-t-4 border-amber-600 rounded-tr-lg"></div>
+            <div className="absolute -bottom-2 -left-2 w-8 h-8 border-l-4 border-b-4 border-amber-600 rounded-bl-lg"></div>
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 border-r-4 border-b-4 border-amber-600 rounded-br-lg"></div>
+
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-amber-300 mb-4 font-serif">CHARACTER DOSSIER</h1>
+              <div className="border-t border-b border-amber-600/50 py-6 my-6">
+                
+                <div className={`relative mx-auto w-40 h-40 mb-6 bg-gradient-to-br ${selectedChar.colors} rounded-full flex items-center justify-center shadow-2xl`}>
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full animate-pulse"></div>
+                  <div className="text-8xl animate-bounce" style={{animationDuration: '3s'}}>
+                    {selectedChar.silhouette}
+                  </div>
+                  <div className="absolute -inset-4 bg-gradient-to-r from-amber-400/20 to-orange-400/20 rounded-full blur-lg animate-pulse"></div>
+                </div>
+
+                <h2 className="text-3xl font-bold text-white mb-2">{selectedChar.name}</h2>
+                <p className="text-amber-300 text-lg mb-4">{selectedChar.gender} • {gameState.playerName}</p>
+              </div>
+            </div>
+            
+            <div className="bg-black/30 rounded-xl p-6 mb-6 border border-amber-600/30">
+              <h3 className="text-xl font-bold text-amber-400 mb-3 font-serif">📋 PHYSICAL DESCRIPTION</h3>
+              <p className="text-gray-200 leading-relaxed italic text-lg">
+                {selectedChar.description}
+              </p>
+            </div>
+
+            <div className="bg-black/30 rounded-xl p-6 mb-6 border border-amber-600/30">
+              <h3 className="text-xl font-bold text-amber-400 mb-3 font-serif">📜 CLASSIFIED BACKGROUND</h3>
+              <p className="text-gray-200 leading-relaxed text-lg">
+                {selectedChar.backstory}
+              </p>
+            </div>
+
+            <div className="bg-black/30 rounded-xl p-6 mb-8 border border-amber-600/30">
+              <h3 className="text-xl font-bold text-amber-400 mb-4 font-serif">⚡ SPECIAL ABILITIES</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {selectedChar.powers.map((power, index) => (
+                  <div key={index} className="bg-amber-600/10 border border-amber-600/30 rounded-lg p-3 text-center">
+                    <div className="text-amber-300 font-bold text-sm mb-1">🌟 POWER {index + 1}</div>
+                    <div className="text-white font-semibold">{power}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-red-900/50 to-orange-900/50 rounded-xl p-6 mb-8 border-2 border-red-500/50">
+              <h3 className="text-xl font-bold text-red-300 mb-3 font-serif">🚨 MISSION BRIEFING</h3>
+              <p className="text-gray-200 text-lg leading-relaxed">
+                Agent {selectedChar.name}, you have been selected for a classified expedition to the Seven Ancient Wonders. 
+                Your unique abilities make you essential for this mission. The fate of archaeological history rests in your hands. 
+                <span className="text-amber-300 font-bold"> Are you ready to make history?</span>
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                onClick={proceedToGame}
+                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-black font-bold py-4 px-8 rounded-lg transition-all duration-300 uppercase tracking-wide font-serif shadow-lg text-xl"
+              >
+                🎯 ACCEPT MISSION
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-amber-900 via-orange-900 to-red-900">
+      <div className="absolute inset-0 opacity-10 bg-grid-pattern"></div>
+      
+      <div className="absolute inset-8 border-4 border-amber-800 opacity-40 rounded-lg border-double"></div>
+      
+      <div className="absolute top-12 left-12 w-12 h-12 opacity-20">
+        <div className="transform rotate-45 text-amber-700 text-3xl">🧭</div>
+      </div>
+      <div className="absolute top-12 right-12 w-12 h-12 opacity-20">
+        <div className="text-amber-700 text-3xl">⚔️</div>
+      </div>
+      <div className="absolute bottom-12 left-12 w-12 h-12 opacity-20">
+        <div className="text-amber-700 text-3xl">🏴‍☠️</div>
+      </div>
+      <div className="absolute bottom-12 right-12 w-12 h-12 opacity-20">
+        <div className="text-amber-700 text-3xl">🗺️</div>
+      </div>
+      
+      <div className="relative z-10 bg-black/40 backdrop-blur-sm border-b-2 border-amber-700/50 p-4">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <Compass className="w-8 h-8 text-amber-400" />
+            <div>
+              <h1 className="text-xl font-bold text-amber-300 font-serif tracking-wide">ANCIENT WONDERS EXPEDITION</h1>
+              <p className="text-amber-200 text-sm">{getPlayerTitle()} {gameState.playerName} • {gameState.expeditionRank}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-6 text-amber-100">
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg border ${
+              gameState.timeRemaining <= 300 ? 'bg-red-600/20 border-red-400 text-red-200' :
+              gameState.timeRemaining <= 600 ? 'bg-yellow-600/20 border-yellow-400 text-yellow-200' :
+              'bg-amber-600/20 border-amber-400 text-amber-200'
+            }`}>
+              <Timer className="w-5 h-5" />
+              <span className="font-bold font-mono">{formatTime(gameState.timeRemaining)}</span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Star className="w-5 h-5 text-amber-400" />
+              <span className="font-bold">{gameState.knowledgeTokens}</span>
+              <span className="text-sm text-amber-300">Gold</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Trophy className="w-5 h-5 text-orange-400" />
+              <span className="font-bold">Rank {gameState.level}</span>
+            </div>
+            
+            <button
+              onClick={() => setShowBadges(!showBadges)}
+              className="flex items-center space-x-2 bg-purple-600/20 hover:bg-purple-600/30 px-3 py-2 rounded-lg transition-colors border border-purple-600/50"
+            >
+              <Award className="w-5 h-5 text-purple-400" />
+              <span className="font-bold">{gameState.badges.length}</span>
+              <span className="text-sm text-purple-300">Badges</span>
+            </button>
+            
+            <button
+              onClick={() => setShowInventory(!showInventory)}
+              className="flex items-center space-x-2 bg-amber-600/20 hover:bg-amber-600/30 px-3 py-2 rounded-lg transition-colors border border-amber-600/50"
+            >
+              <Pickaxe className="w-5 h-5 text-amber-400" />
+              <span className="font-bold">{gameState.artifacts.length}</span>
+              <span className="text-sm text-amber-300">Artifacts</span>
+            </button>
+            
+            <div className="text-right">
+              <div className="text-sm text-amber-300">Score</div>
+              <div className="font-bold text-lg text-amber-100">{calculateScore()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showBadges && (
+        <div className="relative z-20 bg-black/60 backdrop-blur-sm border-b-2 border-purple-600/30 p-4">
+          <div className="max-w-6xl mx-auto">
+            <h3 className="text-lg font-bold text-purple-300 mb-3 font-serif">🏆 EXPEDITION BADGES</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {gameBadges.map((badge, index) => {
+                const earned = gameState.badges.find(b => b.id === badge.id);
+                return (
+                  <div key={index} className={`border rounded-lg p-3 text-center backdrop-blur-sm transition-all ${
+                    earned ? 'bg-purple-600/20 border-purple-400 shadow-lg' : 'bg-gray-600/10 border-gray-600/30 opacity-50'
+                  }`}>
+                    <div className={`text-3xl mb-2 ${earned ? 'animate-pulse' : 'grayscale'}`}>
+                      {badge.icon}
+                    </div>
+                    <div className={`text-sm font-bold mb-1 ${earned ? 'text-purple-200' : 'text-gray-400'}`}>
+                      {badge.name}
+                    </div>
+                    <div className={`text-xs ${earned ? 'text-purple-300' : 'text-gray-500'}`}>
+                      {badge.description}
+                    </div>
+                    <div className={`text-xs font-bold mt-1 ${earned ? 'text-yellow-300' : 'text-gray-600'}`}>
+                      {badge.points} pts
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInventory && (
+        <div className="relative z-20 bg-black/60 backdrop-blur-sm border-b-2 border-amber-600/30 p-4">
+          <div className="max-w-6xl mx-auto">
+            <h3 className="text-lg font-bold text-amber-300 mb-3 font-serif">📦 EXPEDITION INVENTORY</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {gameState.artifacts.map((artifact, index) => {
+                const IconComponent = artifact.icon;
+                return (
+                  <div key={index} className="bg-amber-600/10 border border-amber-600/30 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <IconComponent className="w-8 h-8 mx-auto mb-2 text-amber-400" />
+                    <div className="text-amber-100 text-sm font-bold">{artifact.name}</div>
+                    <div className="text-amber-300 text-xs">{artifact.description}</div>
+                  </div>
+                );
+              })}
+              {gameState.artifacts.length === 0 && (
+                <div className="col-span-full text-center text-amber-400 py-8">
+                  <Pickaxe className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No artifacts discovered yet. Complete challenges to find ancient treasures!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="relative z-10 max-w-6xl mx-auto p-6">
+        {gameState.currentWonder !== null ? (
+          <div className="space-y-6">
+            <button
+              onClick={() => setGameState(prev => ({...prev, currentWonder: null}))}
+              className="text-amber-300 hover:text-amber-200 transition-colors flex items-center space-x-2 font-serif"
+            >
+              <Map className="w-4 h-4" />
+              <span>← Return to Base Camp</span>
+            </button>
+            
+            <div className={`bg-gradient-to-r ${wonders[gameState.currentWonder].color} rounded-2xl p-8 text-white relative overflow-hidden border-2 border-amber-700/30`}>
+              <div className="absolute top-4 right-4">
+                <div className={`px-3 py-1 bg-black/30 rounded-full text-sm font-bold ${getDangerColor(wonders[gameState.currentWonder].danger)}`}>
+                  ⚠️ {wonders[gameState.currentWonder].danger} Risk
+                </div>
+              </div>
+              <h2 className="text-4xl font-bold mb-2 font-serif">{wonders[gameState.currentWonder].name}</h2>
+              <p className="text-xl opacity-90 mb-2 font-semibold">📍 {wonders[gameState.currentWonder].location}</p>
+              <p className="text-lg opacity-80 mb-4 italic">"{wonders[gameState.currentWonder].description}"</p>
+              <div className="bg-black/20 rounded-lg p-3 inline-block border border-amber-600/30">
+                <span className="text-amber-200 font-bold">📋 EXPEDITION: {wonders[gameState.currentWonder].expedition}</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-4">
+              <h3 className="text-2xl font-bold text-amber-300 flex items-center space-x-2 font-serif">
+                <Target className="w-6 h-6" />
+                <span>🏛️ FIELD CHALLENGES</span>
+              </h3>
+              
+              {wonders[gameState.currentWonder].challenges.map((challenge, index) => (
+                <div key={index} className="bg-black/40 backdrop-blur-sm rounded-xl p-6 border-2 border-amber-600/30 hover:border-amber-600/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className={`w-3 h-3 rounded-full ${
+                          challenge.type === 'meaning' ? 'bg-blue-500' :
+                          challenge.type === 'purpose' ? 'bg-indigo-500' :
+                          challenge.type === 'development' ? 'bg-green-500' :
+                          challenge.type === 'progression' ? 'bg-emerald-500' :
+                          challenge.type === 'creativity' ? 'bg-teal-500' :
+                          challenge.type === 'social' ? 'bg-orange-500' :
+                          challenge.type === 'scarcity' ? 'bg-red-500' :
+                          challenge.type === 'curiosity' ? 'bg-purple-500' :
+                          challenge.type === 'avoidance' ? 'bg-gray-500' :
+                          'bg-yellow-500'
+                        }`}></div>
+                        <span className="text-amber-300 font-bold text-sm uppercase tracking-wide">
+                          {challenge.type} Challenge
+                        </span>
+                      </div>
+                      <h4 className="text-lg font-bold text-amber-100 font-serif">{challenge.title}</h4>
+                      <p className="text-amber-200 text-sm">Danger awaits! Use your wits to survive and claim the treasure.</p>
+                      <div className="text-amber-300 text-sm font-bold mt-2">
+                        🏆 Reward: {challenge.reward}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => startChallenge(challenge)}
+                      className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-black font-bold px-6 py-3 rounded-lg transition-all duration-300 flex items-center space-x-2 font-serif shadow-lg border-2 border-amber-800"
+                    >
+                      <span>🎯 ACCEPT</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-4xl font-bold text-amber-400 mb-2 font-serif">🎯 OCTALYSIS MASTERY MAP</h2>
+              <p className="text-gray-300 text-lg">Master the 8 Core Drives of Human Motivation through ancient adventures...</p>
+              <div className="mt-4 bg-yellow-600/20 border border-yellow-600/50 rounded-lg p-3 inline-block">
+                <span className="text-yellow-300 text-sm font-bold">
+                  🧠 Educational Focus: The Octalysis Framework by Yu-kai Chou
+                </span>
+              </div>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {wonders.map((wonder, index) => (
+                <div
+                  key={index}
+                  className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
+                    gameState.unlockedWonders.includes(index)
+                      ? 'border-yellow-600/50 hover:border-yellow-400 cursor-pointer hover:scale-105 hover:shadow-2xl'
+                      : 'border-gray-600 opacity-50 cursor-not-allowed'
+                  }`}
+                  onClick={() => selectWonder(index)}
+                >
+                  <div className={`bg-gradient-to-br ${wonder.color} p-6 h-full relative`}>
+                    {!gameState.unlockedWonders.includes(index) && (
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm">
+                        <div className="text-center text-white">
+                          <Trophy className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p className="font-bold text-lg">🔒 LOCKED</p>
+                          <p className="text-sm">Complete previous expeditions</p>
+                          <p className="text-xs mt-1 text-yellow-300">Need {(index === 1 ? 40 : index === 2 ? 80 : index === 3 ? 120 : index === 4 ? 160 : index === 5 ? 200 : index === 6 ? 240 : index * 40)} Gold</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="text-white">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className={`px-2 py-1 bg-black/30 rounded text-xs font-bold ${getDangerColor(wonder.danger)}`}>
+                          ⚠️ {wonder.danger}
+                        </div>
+                        {gameState.unlockedWonders.includes(index) && (
+                          <div className="text-yellow-400 flex items-center space-x-1">
+                            <Compass className="w-4 h-4" />
+                            <span className="text-xs font-bold">Level {index + 1}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <h3 className="text-xl font-bold mb-2 font-serif">{wonder.name}</h3>
+                      <div className="bg-black/30 rounded p-2 mb-2">
+                        <span className="text-yellow-300 text-xs font-bold">🎯 {wonder.octalysisCore}</span>
+                      </div>
+                      <p className="text-xs opacity-90 mb-2 font-semibold">📍 {wonder.location}</p>
+                      <p className="text-xs opacity-80 mb-3 italic">{wonder.description}</p>
+                      
+                      {gameState.unlockedWonders.includes(index) && (
+                        <div className="bg-black/20 rounded p-2 text-xs">
+                          <span className="text-yellow-300 font-bold">📋 {wonder.expedition}</span>
+                          <div className="text-gray-300 mt-1">{wonder.levelTheme}</div>
+                        </div>
+                      )}
+                      
+                      {gameState.unlockedWonders.includes(index) && (
+                        <div className="mt-4 flex items-center justify-end">
+                          <ArrowRight className="w-5 h-5 text-yellow-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {currentChallenge && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-amber-900 to-orange-900 rounded-xl max-w-3xl w-full p-8 border-2 border-yellow-600/50 shadow-2xl">
+            <div className="mb-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className={`w-4 h-4 rounded-full ${
+                  currentChallenge.type === 'meaning' ? 'bg-blue-500' :
+                  currentChallenge.type === 'purpose' ? 'bg-indigo-500' :
+                  currentChallenge.type === 'development' ? 'bg-green-500' :
+                  currentChallenge.type === 'progression' ? 'bg-emerald-500' :
+                  currentChallenge.type === 'creativity' ? 'bg-teal-500' :
+                  currentChallenge.type === 'social' ? 'bg-orange-500' :
+                  currentChallenge.type === 'scarcity' ? 'bg-red-500' :
+                  currentChallenge.type === 'curiosity' ? 'bg-purple-500' :
+                  currentChallenge.type === 'avoidance' ? 'bg-gray-500' :
+                  'bg-yellow-500'
+                }`}></div>
+                <h3 className="text-2xl font-bold text-yellow-400 font-serif uppercase tracking-wide">
+                  ⚡ {currentChallenge.title}
+                </h3>
+                {getCharacterBonus(currentChallenge.type).bonus > 0 && (
+                  <div className="bg-yellow-400/20 border border-yellow-400/50 rounded-full px-3 py-1">
+                    <span className="text-yellow-300 text-sm font-bold">
+                      🌟 {getCharacterBonus(currentChallenge.type).ability}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {getCharacterHint(currentChallenge) && (
+                <div className="bg-yellow-600/20 border border-yellow-600/40 rounded-lg p-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    <span className="text-yellow-200 text-sm italic">
+                      {getCharacterHint(currentChallenge)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="bg-black/40 rounded-lg p-4 border border-yellow-600/30">
+                <p className="text-lg text-white leading-relaxed">{currentChallenge.question}</p>
+              </div>
+            </div>
+            
+            {!challengeResult && (
+              <div className="space-y-3 mb-6">
+                {currentChallenge.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => answerChallenge(index)}
+                    className="w-full p-4 text-left bg-black/30 hover:bg-yellow-600/20 rounded-lg transition-all border-2 border-yellow-600/30 hover:border-yellow-400 text-white group"
+                  >
+                    <span className="font-bold text-yellow-400 mr-3 text-lg group-hover:text-yellow-300">
+                      {String.fromCharCode(65 + index)}.
+                    </span>
+                    <span className="text-lg">{option}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {challengeResult && (
+              <div className={`p-6 rounded-lg mb-6 border-2 ${
+                challengeResult === 'correct' 
+                  ? 'bg-green-900/50 text-green-200 border-green-400' 
+                  : 'bg-red-900/50 text-red-200 border-red-400'
+              }`}>
+                <h4 className="font-bold text-2xl mb-3 font-serif">
+                  {challengeResult === 'correct' ? '🎉 SUCCESS!' : '💀 FAILURE!'}
+                </h4>
+                <p className="text-lg mb-3">{currentChallenge.explanation}</p>
+                {challengeResult === 'correct' && (
+                  <div className="bg-yellow-600/20 border border-yellow-600/50 rounded p-3">
+                    <p className="text-yellow-300 font-bold text-lg">
+                      🏆 Artifact Discovered: {currentChallenge.reward}
+                    </p>
+                    <p className="text-yellow-200">
+                      +15 Base Gold + {getCharacterBonus(currentChallenge.type).bonus} Bonus Gold earned!
+                      {getCharacterBonus(currentChallenge.type).bonus > 0 && (
+                        <span className="block text-yellow-100 text-sm mt-1">
+                          ⭐ {getCharacterBonus(currentChallenge.type).ability} helped you excel!
+                        </span>
+                      )}
+                    </p>
+                    {currentChallenge.octalysisInsight && (
+                      <div className="mt-3 bg-blue-600/20 border border-blue-600/50 rounded p-2">
+                        <p className="text-blue-200 text-sm font-bold">🧠 Octalysis Insight:</p>
+                        <p className="text-blue-100 text-sm">{currentChallenge.octalysisInsight}</p>
+                      </div>
+                    )}
+                    
+                    {challengeResult === 'correct' && gameState.badges.length > 0 && (
+                      <div className="mt-3">
+                        {gameState.badges.slice(-1).map((badge, index) => (
+                          <div key={index} className="bg-purple-600/20 border border-purple-600/50 rounded p-2 animate-pulse">
+                            <p className="text-purple-200 text-sm font-bold">🏆 Badge Unlocked!</p>
+                            <p className="text-purple-100 text-sm flex items-center space-x-2">
+                              <span className="text-lg">{badge.icon}</span>
+                              <span>{badge.name} (+{badge.points} points)</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="flex justify-end">
+              <button
+                onClick={closeChallenge}
+                className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white font-bold px-6 py-3 rounded-lg transition-all font-serif"
+              >
+                {challengeResult ? '🚪 Continue Adventure' : '🏃 Retreat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gameState.gameEnded && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-amber-900 to-orange-900 rounded-xl max-w-2xl w-full p-8 border-2 border-amber-700/50 shadow-2xl text-center">
+            <div className="mb-6">
+              <h2 className="text-4xl font-bold text-amber-300 mb-4 font-serif">
+                {gameState.gameCompleted ? '🎉 EXPEDITION COMPLETE!' : '⏰ TIME\'S UP!'}
+              </h2>
+              <p className="text-xl text-amber-200 mb-6">
+                {gameState.gameCompleted ? 
+                  'Congratulations! You\'ve mastered the Octalysis Framework!' : 
+                  'Your time has run out, but knowledge gained is never lost!'}
+              </p>
+            </div>
+            
+            <div className="bg-black/30 rounded-lg p-6 mb-6">
+              <h3 className="text-2xl font-bold text-amber-300 mb-4">Final Score</h3>
+              <div className="grid grid-cols-2 gap-4 text-amber-200">
+                <div>
+                  <div className="text-3xl font-bold text-amber-100">{calculateScore()}</div>
+                  <div className="text-sm">Total Points</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-300">{gameState.correctAnswers}/{gameState.totalChallenges}</div>
+                  <div className="text-sm">Correct Answers</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-300">{gameState.badges.length}</div>
+                  <div className="text-sm">Badges Earned</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-300">{formatTime(1800 - gameState.timeRemaining)}</div>
+                  <div className="text-sm">Time Taken</div>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-black font-bold py-3 px-8 rounded-lg transition-all duration-300 font-serif"
+            >
+              🎯 NEW EXPEDITION
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default IndyKnowledgeGame;
